@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"os"
 	"sort"
 	"time"
 
@@ -228,10 +229,16 @@ func (c *Controller) getAndHandlePod(key string) error {
 		return err
 	}
 
-	err = c.handlePodGooglechat(pod)
+	if os.Getenv("USE_GOOGLE_CHAT") == "true" {
+		err = c.handlePodGooglechat(pod)
+	} else {
+		err = c.handlePod(pod)
+	}
+
 	if err != nil {
 		return err
 	}
+
 	return nil
 }
 
