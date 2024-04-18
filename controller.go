@@ -431,7 +431,7 @@ func (c *Controller) handlePodGooglechat(pod *v1.Pod) error {
 		}
 
 		msg := GoogleChatMessage{
-			Text: fmt.Sprintf("*Pod restarted!*\n*cluster: `%s`, pod: `%s`, namespace: `%s`*\n%s%s%s", c.googleChat.ClusterName, pod.Name, pod.Namespace, podStatus, podEvents, nodeEvents, containerLogs),
+			Text: fmt.Sprintf("*Pod restarted!*\n*cluster: `%s`, pod: `%s`, namespace: `%s`*\n%s%s%s%s", c.googleChat.ClusterName, pod.Name, pod.Namespace, podStatus, podEvents, nodeEvents, containerLogs),
 		}
 		// klog.Infoln(msg.Title + "\n" + msg.Text + "\n" + msg.Footer)
 		err = c.googleChat.sendToRoom(msg)
