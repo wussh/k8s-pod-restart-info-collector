@@ -14,7 +14,7 @@ muteSeconds: 600
 ignoreRestartCount: 30
 googlechatWebhookUrl: https://chat.googleapis.com/v1/spaces/SPACE_ID/messages?key=KEY&token=TOKEN
 # useGooglechat: true
-
+  
 # A set of namespaces to be ignored. This should be provided as a comma-separated list or a regular expression.
 ignoredNamespaces: ""
 # A set of pod name prefixes to be ignored. This should be provided as a comma-separated list or a regular expression.
