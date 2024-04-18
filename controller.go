@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"os"
 	"sort"
 	"time"
 
@@ -29,6 +30,7 @@ const (
 type Controller struct {
 	clientset       kubernetes.Interface
 	slack           Slack
+	googleChat      GoogleChat
 	informerFactory informers.SharedInformerFactory
 	podInformer     coreinformers.PodInformer
 	queue           workqueue.RateLimitingInterface
@@ -86,6 +88,60 @@ func NewController(clientset kubernetes.Interface, slack Slack) *Controller {
 		podInformer:     podInformer,
 		queue:           queue,
 		slack:           slack,
+	}
+}
+
+func NewControllerGooglechat(clientset kubernetes.Interface, googleChat GoogleChat) *Controller {
+	const resyncPeriod = 0
+	ignoreRestartCount := getIgnoreRestartCount()
+
+	queue := workqueue.NewRateLimitingQueue(workqueue.DefaultControllerRateLimiter())
+	informerFactory := informers.NewSharedInformerFactory(clientset, resyncPeriod)
+	podInformer := informerFactory.Core().V1().Pods()
+	podInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
+		UpdateFunc: func(old interface{}, new interface{}) {
+			oldPod, ok := old.(*v1.Pod)
+			if !ok {
+				return
+			}
+
+			newPod, ok := new.(*v1.Pod)
+			if !ok {
+				return
+			}
+
+			if !isWatchedNamespace(newPod.Namespace) || isIgnoredNamespace(newPod.Namespace) {
+				return
+			}
+
+			if !isWatchedPod(newPod.Name) || isIgnoredPod(newPod.Name) {
+				return
+			}
+
+			newPodRestartCount := getPodRestartCount(newPod)
+			// Ignore when restartCount > ignoreRestartCount
+			if newPodRestartCount > ignoreRestartCount {
+				klog.Infof("Ignore: %s/%s restartCount: %d > %d\n", newPod.Namespace, newPod.Name, newPodRestartCount, ignoreRestartCount)
+				return
+			}
+
+			oldPodRestartCount := getPodRestartCount(oldPod)
+			if newPodRestartCount > oldPodRestartCount {
+				key, err := cache.MetaNamespaceKeyFunc(new)
+				if err == nil {
+					queue.Add(key)
+				}
+				klog.Infof("Found: %s/%s restarted, restartCount: %d -> %d\n", newPod.Namespace, newPod.Name, oldPodRestartCount, newPodRestartCount)
+			}
+		},
+	})
+
+	return &Controller{
+		clientset:       clientset,
+		informerFactory: informerFactory,
+		podInformer:     podInformer,
+		queue:           queue,
+		googleChat:      googleChat,
 	}
 }
 
@@ -173,10 +229,16 @@ func (c *Controller) getAndHandlePod(key string) error {
 		return err
 	}
 
-	err = c.handlePod(pod)
+	if os.Getenv("USE_GOOGLE_CHAT") == "true" {
+		err = c.handlePodGooglechat(pod)
+	} else {
+		err = c.handlePod(pod)
+	}
+
 	if err != nil {
 		return err
 	}
+
 	return nil
 }
 
@@ -293,6 +355,96 @@ func (c *Controller) handlePod(pod *v1.Pod) error {
 	return nil
 }
 
+func (c *Controller) handlePodGooglechat(pod *v1.Pod) error {
+	// Skip if pod in slack.History
+	podKey := pod.Namespace + "/" + pod.Name
+
+	currentTime := time.Now().Local()
+	if lastSentTime, ok := c.googleChat.History[podKey]; ok {
+		if int(currentTime.Sub(lastSentTime).Seconds()) < c.googleChat.MuteSeconds {
+			klog.Infof("Skip: %s, already sent %s ago.\n", podKey, duration.HumanDuration(time.Since(lastSentTime)))
+			return nil
+		}
+	}
+
+	// check and collect restarted container info
+	for _, status := range pod.Status.ContainerStatuses {
+		if status.RestartCount == 0 {
+			continue
+		}
+
+		if shouldIgnoreRestartsWithExitCodeZero(status) {
+			klog.Infof("Ignore: %s restarted with ExitCode 0, restartCount: %d\n", podKey, status.RestartCount)
+			continue
+		}
+
+		klog.Infof("Handle: %s restarted, restartCount: %d\n", podKey, status.RestartCount)
+
+		podInfo, err := printPod(pod)
+		if err != nil {
+			return err
+		}
+
+		containerState, err := describeContainerState(status)
+		if err != nil {
+			return err
+		}
+
+		restartReason := printContainerLastStateReason(status)
+
+		var containerSpec v1.Container
+		for _, container := range pod.Spec.Containers {
+			if status.Name == container.Name {
+				containerSpec = container
+				break
+			}
+		}
+		containerResource, err := getContainerResource(containerSpec)
+		if err != nil {
+			return err
+		}
+
+		podStatus := fmt.Sprintf("```%s```\n• Reason: `%s`\n• Pod Status\n```\n%s%s```\n", podInfo, restartReason, containerState, containerResource)
+		podEvents, err := c.getPodEvents(pod)
+		if err != nil {
+			return err
+		}
+		nodeEvents, err := c.getNodeAndEvents(pod)
+		if err != nil {
+			return err
+		}
+
+		containerLogs, err := c.getContainerLogs(pod, status)
+		if err != nil {
+			return err
+		}
+		if containerLogs == "" {
+			containerLogs = "• No Logs Before Restart\n"
+		} else {
+			// Google Chat message text will be truncated when > 4096 chars
+			maxLogLength := 4000 - len(podStatus+podEvents+nodeEvents)
+			if maxLogLength > 0 && len(containerLogs) > maxLogLength {
+				containerLogs = containerLogs[len(containerLogs)-maxLogLength:]
+			}
+			containerLogs = fmt.Sprintf("• Pod Logs Before Restart\n```\n%s```\n", containerLogs)
+		}
+
+		msg := GoogleChatMessage{
+			Text: fmt.Sprintf("*Pod restarted!*\n*cluster: `%s`, pod: `%s`, namespace: `%s`*\n%s%s%s", c.googleChat.ClusterName, pod.Name, pod.Namespace, podStatus, podEvents, nodeEvents, containerLogs),
+		}
+		// klog.Infoln(msg.Title + "\n" + msg.Text + "\n" + msg.Footer)
+		err = c.googleChat.sendToRoom(msg)
+		if err != nil {
+			return err
+		}
+
+		c.googleChat.History[podKey] = currentTime
+		c.cleanOldGoogleChatHistory()
+		break
+	}
+	return nil
+}
+
 func (c *Controller) getPodEvents(pod *v1.Pod) (out string, err error) {
 	events, err := c.clientset.CoreV1().Events(pod.Namespace).List(context.TODO(), metav1.ListOptions{FieldSelector: "type!=Normal"})
 	if err != nil {
@@ -371,6 +523,15 @@ func (c *Controller) cleanOldSlackHistory() {
 	for pod, lastSentTime := range c.slack.History {
 		if currentTime.Sub(lastSentTime).Hours() > 1 {
 			delete(c.slack.History, pod)
+		}
+	}
+}
+
+func (c *Controller) cleanOldGoogleChatHistory() {
+	currentTime := time.Now().Local()
+	for pod, lastSentTime := range c.slack.History {
+		if currentTime.Sub(lastSentTime).Hours() > 1 {
+			delete(c.googleChat.History, pod)
 		}
 	}
 }
