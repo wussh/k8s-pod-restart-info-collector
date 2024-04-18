@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"os"
 
 	// "os"
 	"sort"
@@ -230,14 +231,15 @@ func (c *Controller) getAndHandlePod(key string) error {
 		return err
 	}
 
-	// if os.Getenv("USE_GOOGLE_CHAT") == "true" {
-	// 	err = c.handlePodGooglechat(pod)
-	// } else {
-	err = c.handlePodGooglechat(pod)
-	// }
+	var errHandle error
+	if os.Getenv("USE_GOOGLE_CHAT") == "true" {
+		errHandle = c.handlePodGooglechat(pod)
+	} else {
+		errHandle = c.handlePod(pod)
+	}
 
-	if err != nil {
-		return err
+	if errHandle != nil {
+		return errHandle
 	}
 
 	return nil
@@ -357,7 +359,7 @@ func (c *Controller) handlePod(pod *v1.Pod) error {
 }
 
 func (c *Controller) handlePodGooglechat(pod *v1.Pod) error {
-	// Skip if pod in slack.History
+	// Skip if pod in googlechat.History
 	podKey := pod.Namespace + "/" + pod.Name
 
 	currentTime := time.Now().Local()
@@ -431,7 +433,7 @@ func (c *Controller) handlePodGooglechat(pod *v1.Pod) error {
 		}
 
 		msg := GoogleChatMessage{
-			Text: fmt.Sprintf("*Pod restarted!*\n*cluster: `%s`, pod: `%s`, namespace: `%s`*\n%s%s%s", c.googleChat.ClusterName, pod.Name, pod.Namespace, podStatus, podEvents, nodeEvents, containerLogs),
+			Text: fmt.Sprintf("*Pod restarted!*\n*cluster: `%s`, pod: `%s`, namespace: `%s`*\n%s%s%s%s", c.googleChat.ClusterName, pod.Name, pod.Namespace, podStatus, podEvents, nodeEvents, containerLogs),
 		}
 		// klog.Infoln(msg.Title + "\n" + msg.Text + "\n" + msg.Footer)
 		err = c.googleChat.sendToRoom(msg)
