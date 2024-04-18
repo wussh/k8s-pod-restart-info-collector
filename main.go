@@ -4,7 +4,6 @@ import (
 	"flag"
 	"path/filepath"
 
-	"github.com/joho/godotenv"
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
 
 	"k8s.io/client-go/kubernetes"
@@ -15,10 +14,10 @@ import (
 )
 
 func main() {
-	err := godotenv.Load(".env") // Load environment variables from .env file
-	if err != nil {
-		klog.Warningf("Error loading .env file: %v\n", err)
-	}
+	// err := godotenv.Load(".env") // Load environment variables from .env file
+	// if err != nil {
+	// 	klog.Warningf("Error loading .env file: %v\n", err)
+	// }
 	var kubeconfig *string
 	if home := homedir.HomeDir(); home != "" {
 		kubeconfig = flag.String("kubeconfig", filepath.Join(home, ".kube", "config"), "(optional) absolute path to the kubeconfig file")

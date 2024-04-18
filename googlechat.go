@@ -26,8 +26,8 @@ type GoogleChatMessage struct {
 func NewGoogleChat() GoogleChat {
 	var webhookUrl, clusterName string
 
-	if webhookUrl = os.Getenv("GOOGLE_CHAT_WEBHOOK_URL"); webhookUrl == "" {
-		klog.Exit("Environment variable GOOGLE_CHAT_WEBHOOK_URL is not set")
+	if webhookUrl = os.Getenv("GOOGLECHAT_WEBHOOK_URL"); webhookUrl == "" {
+		klog.Exit("Environment variable GOOGLECHAT_WEBHOOK_URL is not set")
 	}
 	if clusterName = os.Getenv("CLUSTER_NAME"); clusterName == "" {
 		clusterName = "cluster-name"

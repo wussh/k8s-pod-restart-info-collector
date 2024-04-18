@@ -71,7 +71,7 @@ Create the name of the service account to use
   secretKeyRef:
     key: {{ .Values.googlechatWebhookUrlSecretKeyRef.key }} 
     name: {{ .Values.googlechatWebhookUrlSecretKeyRef.name }}
-    optional: false
+  optional: false
 {{- end }}
 {{- end }}
 
