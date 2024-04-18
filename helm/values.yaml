@@ -3,19 +3,19 @@
 # Declare variables to be passed into your templates.
 
 
-clusterName: "Change-Me"
-slackWebhookUrl: "https://hooks.slack.com/services/Change-Me"
-slackWebhookUrlSecretKeyRef:
-  key: "slackWebhookUrl"
-  name: "k8s-pod-restart-info-collector"
+# clusterName: "Change-Me"
+# slackWebhookUrl: "https://hooks.slack.com/services/Change-Me"
+# slackWebhookUrlSecretKeyRef:
+#   key: "slackWebhookUrl"
+#   name: "k8s-pod-restart-info-collector"
 slackChannel: "restart-info-nonprod"
 slackUsername: "k8s-pod-restart-info-collector"
 muteSeconds: 600
 ignoreRestartCount: 30
-googlechatWebhookUrl: "https://chat.googleapis.com/v1/spaces/SPACE_ID/messages?key=KEY&token=TOKEN"
-googlechatWebhookUrlSecretKeyRef:
-  key: "googlechatWebhookUrl"
-  name: "k8s-pod-restart-info-collector"
+# googlechatWebhookUrl: "https://chat.googleapis.com/v1/spaces/SPACE_ID/messages?key=KEY&token=TOKEN"
+# googlechatWebhookUrlSecretKeyRef:
+#   key: "googlechatWebhookUrl"
+#   name: "k8s-pod-restart-info-collector"
 useGooglechat: true
 
   
