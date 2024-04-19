@@ -51,6 +51,8 @@ spec:
               value: {{ .Values.ignoredPodNamePrefixes | quote}}
             - name: IGNORE_RESTARTS_WITH_EXIT_CODE_ZERO
               value: {{ .Values.ignoreRestartsWithExitCodeZero | quote}}
+            - name: USE_GOOGLE_CHAT
+              value: {{ .Values.useGooglechat | quote}}
             - name: GOOGLECHAT_WEBHOOK_URL
               valueFrom:
                 {{- include "k8s-pod-restart-info-collector.GooglechatWebhookUrlSecret" . | indent 14 }}
