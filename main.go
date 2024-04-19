@@ -2,6 +2,7 @@ package main
 
 import (
 	"flag"
+	"os"
 	"path/filepath"
 
 	"github.com/joho/godotenv"
@@ -43,24 +44,26 @@ func main() {
 		klog.Fatal(err)
 	}
 	// Get the value of USE_GOOGLE_CHAT from environment variables
-	// useGoogleChatStr := os.Getenv("USE_GOOGLE_CHAT")
-	// useGoogleChat := false // default value if USE_GOOGLE_CHAT is not set or empty
-	// if useGoogleChatStr != "" {
-	// 	useGoogleChat = (useGoogleChatStr == "true")
-	// }
-	// var controller *Controller
+	useGoogleChatStr := os.Getenv("USE_GOOGLE_CHAT")
+	useGoogleChat := true // default value is true
+	if useGoogleChatStr != "" {
+		useGoogleChat = (useGoogleChatStr == "true")
+	}
+	var controller *Controller
 
-	// if useGoogleChat {
-	googleChat := NewGoogleChat()
-	controller := NewControllerGooglechat(clientset, googleChat)
-	// } else {
-	// 	slack := NewSlack()
-	// 	controller = NewController(clientset, slack)
-	// // }
+	if useGoogleChat {
+		googleChat := NewGoogleChat()
+		controller = NewControllerGooglechat(clientset, googleChat)
+	} else {
+		slack := NewSlack()
+		controller = NewController(clientset, slack)
+	}
+
 	// Start the controller
 	stop := make(chan struct{})
 	defer close(stop)
 	go controller.Run(1, stop)
 	// Wait forever
 	select {}
+
 }
