@@ -207,7 +207,7 @@ func (c *Controller) handleErr(err error, key interface{}) {
 	}
 
 	// This controller retries 3 times if something goes wrong. After that, it stops trying.
-	if c.queue.NumRequeues(key) < 3 {
+	if c.queue.NumRequeues(key) < 0 {
 		klog.Infof("Error syncing Pod %v: %v", key, err)
 
 		// Re-enqueue the key rate limited. Based on the rate limiter on the

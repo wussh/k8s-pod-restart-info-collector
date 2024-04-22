@@ -48,7 +48,13 @@ func NewGoogleChat() GoogleChat {
 	}
 }
 
-func (g GoogleChat) sendHTTPPost(data []byte) error {
+func (g GoogleChat) sendToRoom(msg GoogleChatMessage) error {
+	// Marshal the message into JSON
+	data, err := json.Marshal(msg)
+	if err != nil {
+		return err
+	}
+
 	// Send the HTTP POST request
 	resp, err := http.Post(g.WebhookUrl, "application/json", bytes.NewBuffer(data))
 	if err != nil {
@@ -64,23 +70,8 @@ func (g GoogleChat) sendHTTPPost(data []byte) error {
 		return err
 	}
 
-	return nil
-}
-
-func (g GoogleChat) sendToRoom(msg GoogleChatMessage) error {
-	// Marshal the message into JSON
-	data, err := json.Marshal(msg)
-	if err != nil {
-		return err
-	}
-
-	// Send the HTTP POST request
-	err = g.sendHTTPPost(data)
-	if err != nil {
-		return err
-	}
-
 	klog.Infof("Message sent successfully to Google Chat room")
+
 	return nil
 }
 
@@ -92,12 +83,22 @@ func (g GoogleChat) sendToRoomPodStatus(msg GoogleChatMessage) error {
 	}
 
 	// Send the HTTP POST request
-	err = g.sendHTTPPost(data)
+	resp, err := http.Post(g.WebhookUrl, "application/json", bytes.NewBuffer(data))
 	if err != nil {
+		klog.Infof("Error sending HTTP POST request: %v", err)
+		return err
+	}
+	defer resp.Body.Close()
+
+	// Check the response status code
+	if resp.StatusCode != http.StatusOK {
+		err := fmt.Errorf("unexpected PodStatus status code: %d", resp.StatusCode)
+		klog.Infof("Unexpected PodStatus status code: %d", resp.StatusCode)
 		return err
 	}
 
 	klog.Infof("Message PodStatus sent successfully to Google Chat room")
+
 	return nil
 }
 
@@ -109,12 +110,22 @@ func (g GoogleChat) sendToRoomPodEvent(msg GoogleChatMessage) error {
 	}
 
 	// Send the HTTP POST request
-	err = g.sendHTTPPost(data)
+	resp, err := http.Post(g.WebhookUrl, "application/json", bytes.NewBuffer(data))
 	if err != nil {
+		klog.Infof("Error sending HTTP POST request: %v", err)
+		return err
+	}
+	defer resp.Body.Close()
+
+	// Check the response status code
+	if resp.StatusCode != http.StatusOK {
+		err := fmt.Errorf("unexpected PodEvent status code: %d", resp.StatusCode)
+		klog.Infof("Unexpected PodEvent status code: %d", resp.StatusCode)
 		return err
 	}
 
 	klog.Infof("Message PodEvent sent successfully to Google Chat room")
+
 	return nil
 }
 
@@ -126,12 +137,22 @@ func (g GoogleChat) sendToRoomNodeEvents(msg GoogleChatMessage) error {
 	}
 
 	// Send the HTTP POST request
-	err = g.sendHTTPPost(data)
+	resp, err := http.Post(g.WebhookUrl, "application/json", bytes.NewBuffer(data))
 	if err != nil {
+		klog.Infof("Error sending HTTP POST request: %v", err)
+		return err
+	}
+	defer resp.Body.Close()
+
+	// Check the response status code
+	if resp.StatusCode != http.StatusOK {
+		err := fmt.Errorf("unexpected PodEvent status code: %d", resp.StatusCode)
+		klog.Infof("Unexpected PodEvent status code: %d", resp.StatusCode)
 		return err
 	}
 
-	klog.Infof("Message NodeEvents sent successfully to Google Chat room")
+	klog.Infof("Message PodStatus sent successfully to Google Chat room")
+
 	return nil
 }
 
@@ -143,11 +164,21 @@ func (g GoogleChat) sendToRoomContainerLogs(msg GoogleChatMessage) error {
 	}
 
 	// Send the HTTP POST request
-	err = g.sendHTTPPost(data)
+	resp, err := http.Post(g.WebhookUrl, "application/json", bytes.NewBuffer(data))
 	if err != nil {
+		klog.Infof("Error sending HTTP POST request: %v", err)
+		return err
+	}
+	defer resp.Body.Close()
+
+	// Check the response status code
+	if resp.StatusCode != http.StatusOK {
+		err := fmt.Errorf("unexpected ContainerLogs status code: %d", resp.StatusCode)
+		klog.Infof("Unexpected ContainerLogs status code: %d", resp.StatusCode)
 		return err
 	}
 
 	klog.Infof("Message ContainerLogs sent successfully to Google Chat room")
+
 	return nil
 }
