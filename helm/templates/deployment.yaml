@@ -57,6 +57,11 @@ spec:
             - name: SLACK_WEBHOOK_URL
               valueFrom:
               {{- include "k8s-pod-restart-info-collector.SlackWebhookUrlSecret" . | indent 14 }}
+            {{- if .Values.useGooglechat }}
+            - name: GOOGLECHAT_WEBHOOK_URL
+              valueFrom:
+              {{- include "k8s-pod-restart-info-collector.GooglechatWebhookUrlSecret" . | indent 14 }}
+            {{- end }}
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
       {{- with .Values.nodeSelector }}
