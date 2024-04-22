@@ -5,7 +5,6 @@ go 1.16
 require (
 	cloud.google.com/go/compute v1.23.4 // indirect
 	github.com/google/uuid v1.6.0 // indirect
-	github.com/joho/godotenv v1.5.1
 	github.com/kr/pretty v0.3.1 // indirect
 	github.com/slack-go/slack v0.10.0
 	golang.org/x/oauth2 v0.18.0 // indirect

@@ -230,11 +230,7 @@ func (c *Controller) getAndHandlePod(key string) error {
 		return err
 	}
 
-	// if os.Getenv("USE_GOOGLE_CHAT") == "true" {
-	// 	err = c.handlePodGooglechat(pod)
-	// } else {
 	err = c.handlePodGooglechat(pod)
-	// }
 
 	if err != nil {
 		return err

@@ -14,10 +14,6 @@ import (
 )
 
 func main() {
-	// err := godotenv.Load(".env") // Load environment variables from .env file
-	// if err != nil {
-	// 	klog.Warningf("Error loading .env file: %v\n", err)
-	// }
 	var kubeconfig *string
 	if home := homedir.HomeDir(); home != "" {
 		kubeconfig = flag.String("kubeconfig", filepath.Join(home, ".kube", "config"), "(optional) absolute path to the kubeconfig file")
@@ -41,21 +37,11 @@ func main() {
 	if err != nil {
 		klog.Fatal(err)
 	}
-	// Get the value of USE_GOOGLE_CHAT from environment variables
-	// useGoogleChatStr := os.Getenv("USE_GOOGLE_CHAT")
-	// useGoogleChat := false // default value if USE_GOOGLE_CHAT is not set or empty
-	// if useGoogleChatStr != "" {
-	// 	useGoogleChat = (useGoogleChatStr == "true")
-	// }
-	// var controller *Controller
 
 	// if useGoogleChat {
 	googleChat := NewGoogleChat()
 	controller := NewControllerGooglechat(clientset, googleChat)
-	// } else {
-	// 	slack := NewSlack()
-	// 	controller = NewController(clientset, slack)
-	// // }
+
 	// Start the controller
 	stop := make(chan struct{})
 	defer close(stop)
