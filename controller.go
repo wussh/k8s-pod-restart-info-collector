@@ -359,25 +359,17 @@ func (c *Controller) handlePod(pod *v1.Pod) error {
 }
 
 func (c *Controller) handlePodGooglechat(pod *v1.Pod) error {
-	// Skip if pod in googlechat.History
 	podKey := pod.Namespace + "/" + pod.Name
-
 	currentTime := time.Now().Local()
-	if lastSentTime, ok := c.googleChat.History[podKey]; ok {
-		if int(currentTime.Sub(lastSentTime).Seconds()) < c.googleChat.MuteSeconds {
-			klog.Infof("Skip: %s, already sent %s ago.\n", podKey, duration.HumanDuration(time.Since(lastSentTime)))
-			return nil
-		}
+
+	lastSentTime, ok := c.googleChat.History[podKey]
+	if ok && int(currentTime.Sub(lastSentTime).Seconds()) < c.googleChat.MuteSeconds {
+		klog.Infof("Skip: %s, already sent %s ago.\n", podKey, duration.HumanDuration(time.Since(lastSentTime)))
+		return nil
 	}
 
-	// check and collect restarted container info
 	for _, status := range pod.Status.ContainerStatuses {
-		if status.RestartCount == 0 {
-			continue
-		}
-
-		if shouldIgnoreRestartsWithExitCodeZero(status) {
-			klog.Infof("Ignore: %s restarted with ExitCode 0, restartCount: %d\n", podKey, status.RestartCount)
+		if status.RestartCount == 0 || shouldIgnoreRestartsWithExitCodeZero(status) {
 			continue
 		}
 
@@ -408,23 +400,27 @@ func (c *Controller) handlePodGooglechat(pod *v1.Pod) error {
 		}
 
 		podStatus := fmt.Sprintf("```%s```\n• Reason: `%s`\n• Pod Status\n```\n%s%s```\n", podInfo, restartReason, containerState, containerResource)
-		podEvents, err := c.getPodEvents(pod)
-		if err != nil {
+
+		podEvents, nodeEvents, containerLogs := "", "", ""
+		if err := func() error {
+			var err error
+			podEvents, err = c.getPodEvents(pod)
+			if err != nil {
+				return err
+			}
+			nodeEvents, err = c.getNodeAndEvents(pod)
+			if err != nil {
+				return err
+			}
+			containerLogs, err = c.getContainerLogs(pod, status)
 			return err
-		}
-		nodeEvents, err := c.getNodeAndEvents(pod)
-		if err != nil {
+		}(); err != nil {
 			return err
 		}
 
-		containerLogs, err := c.getContainerLogs(pod, status)
-		if err != nil {
-			return err
-		}
 		if containerLogs == "" {
 			containerLogs = "• No Logs Before Restart\n"
 		} else {
-			// Google Chat message text will be truncated when > 4096 chars
 			maxLogLength := 4000 - len(podStatus+podEvents+nodeEvents)
 			if maxLogLength > 0 && len(containerLogs) > maxLogLength {
 				containerLogs = containerLogs[len(containerLogs)-maxLogLength:]
@@ -433,11 +429,29 @@ func (c *Controller) handlePodGooglechat(pod *v1.Pod) error {
 		}
 
 		msg := GoogleChatMessage{
-			Text: fmt.Sprintf("*Pod restarted!*\n*cluster: `%s`, pod: `%s`, namespace: `%s`*\n%s%s%s%s", c.googleChat.ClusterName, pod.Name, pod.Namespace, podStatus, podEvents, nodeEvents, containerLogs),
+			Text: fmt.Sprintf("*Pod restarted!*\n*cluster: `%s`, pod: `%s`, namespace: `%s`*\n", c.googleChat.ClusterName, pod.Name, pod.Namespace),
 		}
-		// klog.Infoln(msg.Title + "\n" + msg.Text + "\n" + msg.Footer)
-		err = c.googleChat.sendToRoom(msg)
-		if err != nil {
+		if err := c.googleChat.sendToRoom(msg); err != nil {
+			return err
+		}
+
+		msg.Text = podStatus
+		if err := c.googleChat.sendToRoomPodStatus(msg); err != nil {
+			return err
+		}
+
+		msg.Text = podEvents
+		if err := c.googleChat.sendToRoomPodEvent(msg); err != nil {
+			return err
+		}
+
+		msg.Text = nodeEvents
+		if err := c.googleChat.sendToRoomNodeEvents(msg); err != nil {
+			return err
+		}
+
+		msg.Text = containerLogs
+		if err := c.googleChat.sendToRoomContainerLogs(msg); err != nil {
 			return err
 		}
 

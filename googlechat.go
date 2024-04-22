@@ -48,13 +48,7 @@ func NewGoogleChat() GoogleChat {
 	}
 }
 
-func (g GoogleChat) sendToRoom(msg GoogleChatMessage) error {
-	// Marshal the message into JSON
-	data, err := json.Marshal(msg)
-	if err != nil {
-		return err
-	}
-
+func (g GoogleChat) sendHTTPPost(data []byte) error {
 	// Send the HTTP POST request
 	resp, err := http.Post(g.WebhookUrl, "application/json", bytes.NewBuffer(data))
 	if err != nil {
@@ -70,7 +64,90 @@ func (g GoogleChat) sendToRoom(msg GoogleChatMessage) error {
 		return err
 	}
 
-	klog.Infof("Message sent successfully to Google Chat room")
+	return nil
+}
 
+func (g GoogleChat) sendToRoom(msg GoogleChatMessage) error {
+	// Marshal the message into JSON
+	data, err := json.Marshal(msg)
+	if err != nil {
+		return err
+	}
+
+	// Send the HTTP POST request
+	err = g.sendHTTPPost(data)
+	if err != nil {
+		return err
+	}
+
+	klog.Infof("Message sent successfully to Google Chat room")
+	return nil
+}
+
+func (g GoogleChat) sendToRoomPodStatus(msg GoogleChatMessage) error {
+	// Marshal the message into JSON
+	data, err := json.Marshal(msg)
+	if err != nil {
+		return err
+	}
+
+	// Send the HTTP POST request
+	err = g.sendHTTPPost(data)
+	if err != nil {
+		return err
+	}
+
+	klog.Infof("Message PodStatus sent successfully to Google Chat room")
+	return nil
+}
+
+func (g GoogleChat) sendToRoomPodEvent(msg GoogleChatMessage) error {
+	// Marshal the message into JSON
+	data, err := json.Marshal(msg)
+	if err != nil {
+		return err
+	}
+
+	// Send the HTTP POST request
+	err = g.sendHTTPPost(data)
+	if err != nil {
+		return err
+	}
+
+	klog.Infof("Message PodEvent sent successfully to Google Chat room")
+	return nil
+}
+
+func (g GoogleChat) sendToRoomNodeEvents(msg GoogleChatMessage) error {
+	// Marshal the message into JSON
+	data, err := json.Marshal(msg)
+	if err != nil {
+		return err
+	}
+
+	// Send the HTTP POST request
+	err = g.sendHTTPPost(data)
+	if err != nil {
+		return err
+	}
+
+	klog.Infof("Message NodeEvents sent successfully to Google Chat room")
+	return nil
+}
+
+func (g GoogleChat) sendToRoomContainerLogs(msg GoogleChatMessage) error {
+	// Marshal the message into JSON
+	data, err := json.Marshal(msg)
+	if err != nil {
+		return err
+	}
+
+	// Send the HTTP POST request
+	err = g.sendHTTPPost(data)
+	if err != nil {
+		return err
+	}
+
+	klog.Infof("Message ContainerLogs sent successfully to Google Chat room")
 	return nil
 }
