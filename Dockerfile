@@ -1,7 +1,7 @@
 FROM golang:alpine3.19 AS builder
 COPY go.* /
 
-RUN go mod download
+# RUN go mod download
 COPY *.go /
 RUN go build -mod vendor -o /k8s-pod-restart-info-collector /
 
