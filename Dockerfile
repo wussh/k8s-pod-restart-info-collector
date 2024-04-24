@@ -14,7 +14,7 @@ RUN go mod vendor
 COPY . .
 
 # Build the Go app
-RUN GOOS=linux go build -o /k8s-pod-restart-info-collector .
+RUN GOOS=linux go build -mod vendor -o /k8s-pod-restart-info-collector .
 
 # Start a new stage from scratch
 FROM alpine:3.19.1
